@@ -10,15 +10,16 @@ var config = {
             }
         },
         "controls": {
-            "left": 37,
-            "right": 39,
-            "up": 38,
-            "down": 40
-        }
+            "distanceModifyer": 1
+        },
+        "fps": 60
     }
 }
 
 var ctx;
+var mouseHeld = false;
+var p1;
+var mousePos;
 
 $(function() {
     var socket = io();
@@ -33,46 +34,10 @@ $(function() {
     drawFloor();
 
 
-    var p1 = new Player('Me', {x: 100, y: 100}, {width: 50, height: 50}, '#FF0000');
+    p1 = new Player('Me', {x: 100, y: 100}, {width: 50, height: 50}, '#FF0000');
     p1.draw();
 
-
-    $(document).keydown(function(event) {
-
-        var left = config.game.controls.left;
-        var right = config.game.controls.right;
-        var up = config.game.controls.up;
-        var down = config.game.controls.down;
-
-        switch(event.which) {
-            case left:
-                p1.angle = 3 * Math.PI/2;
-                break;
-            case right:
-                p1.angle = Math.PI/2;
-                break;
-            case up:
-                p1.angle = 0;
-                break;
-            case down:
-                p1.angle = Math.PI;
-                break;
-        }
-
-        p1.move();
-        drawFloor();
-        p1.draw();
-    })
-
-    $(document).mousemove(function(event) {
-        var mousePos = {"x": event.clientX, "y": event.clientY};
-
-        var angle = calcPlayerMouseAngle(p1.pos, mousePos);
-        p1.angle = angle;
-
-        drawFloor();
-        p1.draw();
-    })
+    gameLoop();
 })
 
 // Draw a rect across the entire canvas
@@ -91,8 +56,9 @@ var Player = function(name, pos, size, colour) {
     this.size = size;
     this.colour = colour;
 
-    this.speed = 15;
-    this.angle = Math.PI/2;
+    this.maxSpeed = 1;
+    this.speed = 0;
+    this.angle = 0;
 }
 
 Player.prototype.draw = function() {
@@ -108,16 +74,68 @@ Player.prototype.draw = function() {
 }
 
 Player.prototype.move = function() {
-    this.pos.x += Math.sin(this.angle) * this.speed;
-    this.pos.y -= Math.cos(this.angle) * this.speed;
+    this.pos.x -= Math.sin(this.angle) * this.speed;
+    this.pos.y += Math.cos(this.angle) * this.speed;
 }
 
 function calcPlayerMouseAngle(playerPos, mousePos) {
     var deltaX = mousePos.x - playerPos.x;
     var deltaY = mousePos.y - playerPos.y;
 
-    return Math.atan2(deltaY, deltaX);
+    return Math.atan2(deltaY, deltaX) - Math.PI/2;
 }
+
+function calcPlayerSpeedFromMouseDistance(distance, maxSpeed) {
+    var distanceModifiyer = config.game.controls.distanceModifyer;
+
+    if (distance >= maxSpeed * distanceModifiyer) {
+        return p1.maxSpeed;
+    } else {
+        return Math.floor(distance / distanceModifiyer);
+    }
+}
+
+function calcPlayerMouseDistance(playerPos, mousePos) {
+    var deltaX = mousePos.x - playerPos.x;
+    var deltaY = mousePos.y - playerPos.y;
+
+    return Math.sqrt(deltaX^2 + deltaY^2);
+}
+
+function onMouseHold() {
+    var distance = calcPlayerMouseDistance(p1.pos, mousePos);
+    var maxSpeed = p1.maxSpeed;
+
+    var speed  = calcPlayerSpeedFromMouseDistance(distance, maxSpeed);
+
+    p1.speed = speed;
+    p1.move();
+    drawFloor();
+    p1.draw();
+}
+
+function gameLoop() {
+    if (mouseHeld)
+        onMouseHold();
+
+    setInterval(gameLoop, 100);
+}
+
+
+$(document).mouseup(function(event) {
+    mouseHeld = false;
+});
+
+$(document).mousedown(function(event) {
+    mouseHeld = true;
+    mousePos = {"x": event.clientX, "y": event.clientY};
+})
+
+$(document).mousemove(function(event) {
+    mousePos = {"x": event.clientX, "y": event.clientY};
+    var angle = calcPlayerMouseAngle(p1.pos, mousePos);
+    p1.angle = angle;
+})
 
 function log(msg, level) {
 
