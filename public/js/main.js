@@ -46,7 +46,7 @@ $(function() {
             if (id == window.me.id) {
                 continue;
             }
-            
+
             var data = players[id];
 
             var player = new Player.Create(data);
@@ -94,8 +94,28 @@ Player.prototype.draw = function() {
 }
 
 Player.prototype.move = function() {
-    this.pos.x += Math.sin(this.angle) * this.speed;
-    this.pos.y -= Math.cos(this.angle) * this.speed;
+    var newPos = {
+        'x': this.pos.x + Math.sin(this.angle) * this.speed,
+        'y': this.pos.y - Math.cos(this.angle) * this.speed
+    };
+
+
+    var intersect = false;
+    var myVertices = rectVertices(newPos, this.size, this.angle);
+    for (var id in window.players) {
+        if (id == this.id)
+            continue;
+        player = window.players[id];
+
+        var vertices = rectVertices(player.pos, player.size, player.angle);
+        if (doPolygonsIntersect(myVertices, vertices))
+            intersect = true;
+    }
+
+    if (!intersect) {
+        this.pos.x = newPos.x;
+        this.pos.y = newPos.y;
+    }
 }
 
 Player.Create = function(data) {
@@ -114,6 +134,101 @@ Player.Create = function(data) {
     return player;
 }
 
+// Returns an array of a the coordinates of a rectangles vertivies
+function rectVertices(pos, size, angle) {
+    // pos is the coordinats of the center of the shape
+    pos = calcCornerCoords(pos, size);
+    var x, y;
+    var cosTheta = Math.cos(angle);
+    var sinTheta = Math.sin(angle);
+
+    var verticies = [];
+    verticies.push(pos);
+
+    x = pos.x + size.width;
+    y = pos.y;
+    verticies.push({'x': x, 'y': y});
+    //verticies.push({'x': x*cosTheta - y*sinTheta, 'y': x*sinTheta + y*cosTheta});
+
+    x = pos.x + size.width;
+    y = pos.y + size.height;
+    verticies.push({'x': x, 'y': y});
+    //verticies.push({'x': x*cosTheta - y*sinTheta, 'y': x*sinTheta + y*cosTheta});
+
+    x = pos.x;
+    y = pos.y + size.height;
+    verticies.push({'x': x, 'y': y});
+    //verticies.push({'x': x*cosTheta - y*sinTheta, 'y': x*sinTheta + y*cosTheta});
+
+    drawVertices(verticies);
+    return verticies;
+}
+
+/**
+ * http://stackoverflow.com/a/12414951
+ *
+ * Helper function to determine whether there is an intersection between the two polygons described
+ * by the lists of vertices. Uses the Separating Axis Theorem
+ *
+ * @param a an array of connected points [{x:, y:}, {x:, y:},...] that form a closed polygon
+ * @param b an array of connected points [{x:, y:}, {x:, y:},...] that form a closed polygon
+ * @return true if there is any intersection between the 2 polygons, false otherwise
+ */
+function doPolygonsIntersect (a, b) {
+    var polygons = [a, b];
+    var minA, maxA, projected, i, i1, j, minB, maxB;
+
+    for (i = 0; i < polygons.length; i++) {
+
+        // for each polygon, look at each edge of the polygon, and determine if it separates
+        // the two shapes
+        var polygon = polygons[i];
+        for (i1 = 0; i1 < polygon.length; i1++) {
+
+            // grab 2 vertices to create an edge
+            var i2 = (i1 + 1) % polygon.length;
+            var p1 = polygon[i1];
+            var p2 = polygon[i2];
+
+            // find the line perpendicular to this edge
+            var normal = { x: p2.y - p1.y, y: p1.x - p2.x };
+
+            minA = maxA = undefined;
+            // for each vertex in the first shape, project it onto the line perpendicular to the edge
+            // and keep track of the min and max of these values
+            for (j = 0; j < a.length; j++) {
+                projected = normal.x * a[j].x + normal.y * a[j].y;
+                if (isUndefined(minA) || projected < minA) {
+                    minA = projected;
+                }
+                if (isUndefined(maxA) || projected > maxA) {
+                    maxA = projected;
+                }
+            }
+
+            // for each vertex in the second shape, project it onto the line perpendicular to the edge
+            // and keep track of the min and max of these values
+            minB = maxB = undefined;
+            for (j = 0; j < b.length; j++) {
+                projected = normal.x * b[j].x + normal.y * b[j].y;
+                if (isUndefined(minB) || projected < minB) {
+                    minB = projected;
+                }
+                if (isUndefined(maxB) || projected > maxB) {
+                    maxB = projected;
+                }
+            }
+
+            // if there is no overlap between the projects, the edge we are looking at separates the two
+            // polygons, and we know there is no overlap
+            if (maxA < minB || maxB < minA) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
 // Calculate coordinate of center from coordinate of top left corner
 function calcCenterCoords(pos, size) {
     var centerPos = {};
@@ -123,7 +238,7 @@ function calcCenterCoords(pos, size) {
 }
 
 // Calculate coordinate of top left corner from coordinate of center
-function calcCornerCoords(pos, size) {
+function calcCornerCoords(pos, size, angle) {
     var cornerPos = {};
     cornerPos.x = pos.x - size.width / 2;
     cornerPos.y = pos.y - size.height / 2;
@@ -213,5 +328,20 @@ function log(msg, level) {
         case 'ERROR':
             console.error(msg);
             break;
+    }
+}
+
+function isUndefined(a) {
+    return a === undefined;
+}
+
+function drawVertices(vertices) {
+    for (var v in vertices) {
+        var vertex = vertices[v];
+
+        window.ctx.beginPath();
+        window.ctx.arc(vertex.x, vertex.y, 1, 0, 2 * Math.PI, false);
+        window.ctx.fillStyle = 'green';
+        window.ctx.fill();
     }
 }

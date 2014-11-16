@@ -30,9 +30,6 @@ io.on('connection', function(socket) {
 
         players[playerID] = player;
 
-        console.log('players updated! - ' + playerID);
-        console.log(Object.keys(players).length);
-
         io.emit('player-update', players);
     })
 });
