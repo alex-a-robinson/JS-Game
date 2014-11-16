@@ -26,15 +26,17 @@ window.players = [];
 $(function() {
     var socket = io();
 
+    socket.emit('hiya', '');
+    socket.on('hello', function(data) {
+        alert(data);
+    });
+
     window.canvas = document.getElementById("board");
 
     window.canvas.width = config.canvas.width;
     window.canvas.height = config.canvas.height;
 
     window.ctx = window.canvas.getContext("2d");
-
-    drawFloor();
-
 
     window.me = new Player('Me', {x: config.canvas.width/2, y: config.canvas.height/2}, {width: 20, height: 20}, '#FF0000');
 

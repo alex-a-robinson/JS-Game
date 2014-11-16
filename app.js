@@ -20,3 +20,9 @@ router.get('/', function(req, res) {
 router.get('/about', function(req, res) {
 	res.send('im the about page!');
 });
+
+io.on('connection', function(socket) {
+    socket.on('hiya', function(data) {
+        socket.emit('hello', 'Whats up?');
+    })
+});
