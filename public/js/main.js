@@ -34,7 +34,7 @@ $(function() {
     drawFloor();
 
 
-    p1 = new Player('Me', {x: 100, y: 100}, {width: 50, height: 50}, '#FF0000');
+    p1 = new Player('Me', {x: config.canvas.width/2, y: config.canvas.height/2}, {width: 50, height: 50}, '#FF0000');
     p1.draw();
 
     gameLoop();
@@ -56,15 +56,17 @@ var Player = function(name, pos, size, colour) {
     this.size = size;
     this.colour = colour;
 
-    this.maxSpeed = 15;
+    this.maxSpeed = 5;
     this.speed = 0;
     this.angle = 0;
 }
 
 Player.prototype.draw = function() {
 
+    var cornerPos = calcCornerCoords(this.pos, this.size);
+
     ctx.save();
-    ctx.translate(this.pos.x + this.size.width / 2, this.pos.y + this.size.height / 2);
+    ctx.translate(cornerPos.x + this.size.width / 2, cornerPos.y + this.size.height / 2);
     ctx.rotate(this.angle);
 
     ctx.fillStyle = this.colour;
@@ -76,6 +78,22 @@ Player.prototype.draw = function() {
 Player.prototype.move = function() {
     this.pos.x += Math.sin(this.angle) * this.speed;
     this.pos.y -= Math.cos(this.angle) * this.speed;
+}
+
+// Calculate coordinate of center from coordinate of top left corner
+function calcCenterCoords(pos, size) {
+    var centerPos = {};
+    centerPos.x = pos.x + size.width / 2;
+    centerPos.y = pos.y + size.height / 2;
+    return centerPos;
+}
+
+// Calculate coordinate of top left corner from coordinate of center
+function calcCornerCoords(pos, size) {
+    var cornerPos = {};
+    cornerPos.x = pos.x - size.width / 2;
+    cornerPos.y = pos.y - size.height / 2;
+    return cornerPos;
 }
 
 function calcPlayerMouseAngle(playerPos, mousePos) {
@@ -91,7 +109,7 @@ function calcPlayerSpeedFromMouseDistance(distance, maxSpeed) {
     if (distance >= maxSpeed * distanceModifiyer) {
         return p1.maxSpeed;
     } else {
-        return Math.floor(distance / distanceModifiyer);
+        return distance / distanceModifiyer;
     }
 }
 
