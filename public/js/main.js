@@ -21,15 +21,11 @@ window.canvas;
 window.mouseHeld = false;
 window.mousePos;
 window.me;
-window.players = [];
+window.players = {};
+window.socket;
 
 $(function() {
-    var socket = io();
-
-    socket.emit('hiya', '');
-    socket.on('hello', function(data) {
-        alert(data);
-    });
+    window.socket = io();
 
     window.canvas = document.getElementById("board");
 
@@ -38,13 +34,26 @@ $(function() {
 
     window.ctx = window.canvas.getContext("2d");
 
-    window.me = new Player('Me', {x: config.canvas.width/2, y: config.canvas.height/2}, {width: 20, height: 20}, '#FF0000');
+    window.me = new Player('Me', {x: config.canvas.width/2, y: config.canvas.height/2}, {width: 20, height: 20}, '#'+Math.floor(Math.random()*16777215).toString(16));
 
-    p1 = new Player('You', {x: config.canvas.width/2, y: config.canvas.height/2}, {width: 20, height: 20}, '#00FF00');
-    window.players.push(window.me);
-    window.players.push(p1);
+    window.players[window.me.id] = window.me;
 
     gameLoop();
+
+    window.socket.on('player-update', function(players) {
+        for (var id in players) {
+
+            if (id == window.me.id) {
+                continue;
+            }
+            
+            var data = players[id];
+
+            var player = new Player.Create(data);
+
+            window.players[id] = player;
+        }
+    });
 })
 
 // Draw a rect across the entire canvas
@@ -66,6 +75,8 @@ var Player = function(name, pos, size, colour) {
     this.maxSpeed = 5;
     this.speed = 0;
     this.angle = 0;
+
+    this.id = Math.floor((Math.random() * 999999) + 100000);
 }
 
 Player.prototype.draw = function() {
@@ -85,6 +96,22 @@ Player.prototype.draw = function() {
 Player.prototype.move = function() {
     this.pos.x += Math.sin(this.angle) * this.speed;
     this.pos.y -= Math.cos(this.angle) * this.speed;
+}
+
+Player.Create = function(data) {
+    var name = data.name;
+    var pos = data.pos;
+    var size = data.size;
+    var colour = data.colour;
+
+    var player = new Player(name, pos, size, colour);
+
+    player.maxSpeed = data.maxSpeed;
+    player.speed    = data.speed;
+    player.angle    = data.angle;
+    player.id       = data.id;
+
+    return player;
 }
 
 // Calculate coordinate of center from coordinate of top left corner
@@ -141,12 +168,13 @@ function gameLoop() {
         onMouseHold();
 
     drawFloor();
-    for(var i in window.players) {
-        var player = window.players[i];
-        log(window.me);
+    for(var id in window.players) {
+        var player = window.players[id];
         player.move();
         player.draw();
     }
+
+    window.socket.emit('player-update', [window.me.id, window.me]);
 
     setTimeout(gameLoop, 10);
 }
@@ -159,13 +187,13 @@ $(document).mouseup(function(event) {
 
 $(document).mousedown(function(event) {
     mouseHeld = true;
-})
+});
 
 $(document).mousemove(function(event) {
     window.mousePos = {"x": event.clientX, "y": event.clientY};
     var angle = calcPlayerMouseAngle(window.me.pos);
     window.me.angle = angle;
-})
+});
 
 function log(msg, level) {
 
