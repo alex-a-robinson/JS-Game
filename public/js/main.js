@@ -10,7 +10,7 @@ var config = {
             }
         },
         "controls": {
-            "distanceModifyer": 1
+            "distanceModifyer": 10
         },
         "fps": 60
     }
@@ -56,7 +56,7 @@ var Player = function(name, pos, size, colour) {
     this.size = size;
     this.colour = colour;
 
-    this.maxSpeed = 1;
+    this.maxSpeed = 15;
     this.speed = 0;
     this.angle = 0;
 }
@@ -74,15 +74,15 @@ Player.prototype.draw = function() {
 }
 
 Player.prototype.move = function() {
-    this.pos.x -= Math.sin(this.angle) * this.speed;
-    this.pos.y += Math.cos(this.angle) * this.speed;
+    this.pos.x += Math.sin(this.angle) * this.speed;
+    this.pos.y -= Math.cos(this.angle) * this.speed;
 }
 
 function calcPlayerMouseAngle(playerPos, mousePos) {
     var deltaX = mousePos.x - playerPos.x;
     var deltaY = mousePos.y - playerPos.y;
 
-    return Math.atan2(deltaY, deltaX) - Math.PI/2;
+    return Math.atan2(deltaY, deltaX) + Math.PI/2;
 }
 
 function calcPlayerSpeedFromMouseDistance(distance, maxSpeed) {
@@ -99,7 +99,7 @@ function calcPlayerMouseDistance(playerPos, mousePos) {
     var deltaX = mousePos.x - playerPos.x;
     var deltaY = mousePos.y - playerPos.y;
 
-    return Math.sqrt(deltaX^2 + deltaY^2);
+    return Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
 }
 
 function onMouseHold() {
@@ -109,26 +109,27 @@ function onMouseHold() {
     var speed  = calcPlayerSpeedFromMouseDistance(distance, maxSpeed);
 
     p1.speed = speed;
-    p1.move();
-    drawFloor();
-    p1.draw();
 }
 
 function gameLoop() {
     if (mouseHeld)
         onMouseHold();
 
-    setInterval(gameLoop, 100);
+    p1.move();
+    drawFloor();
+    p1.draw();
+
+    setTimeout(gameLoop, 10);
 }
 
 
 $(document).mouseup(function(event) {
     mouseHeld = false;
+    p1.speed = 0;
 });
 
 $(document).mousedown(function(event) {
     mouseHeld = true;
-    mousePos = {"x": event.clientX, "y": event.clientY};
 })
 
 $(document).mousemove(function(event) {
